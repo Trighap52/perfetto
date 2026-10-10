@@ -177,6 +177,22 @@ class StdlibDocs(TestSuite):
         "_ProjectionFragment",0,"y","ColumnName"
         """))
 
+  def test_stdlib_objects_macro_arg_description(self):
+    return DiffTestBlueprint(
+        trace=TextProto(r''),
+        query="""
+        SELECT a.value ->> 'name' AS arg_name,
+               a.value ->> 'description' AS description
+        FROM __intrinsic_stdlib_objects AS o,
+             json_each(o.args) AS a
+        WHERE o.qualified_name = 'graphs.search.graph_reachable_bfs'
+          AND a.value ->> 'name' = 'start_nodes';
+        """,
+        out=Csv('''
+        "arg_name","description"
+        "start_nodes","A table/view/subquery corresponding to the list of start nodes for the BFS. This table must have a single column "node_id"."
+        '''))
+
   def test_stdlib_objects_summary(self):
     return DiffTestBlueprint(
         trace=TextProto(r''),

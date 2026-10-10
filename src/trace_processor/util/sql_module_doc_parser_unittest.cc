@@ -158,6 +158,54 @@ $x;
   EXPECT_EQ(macro.args[0].description, "The expression.");
 }
 
+TEST(SqlModuleDocParserTest, MacroArgumentDescriptions) {
+  auto m = Parse(R"(
+CREATE PERFETTO MACRO my_macro(
+  -- The graph to search.
+  graph_table TableOrSubquery,
+  -- The starting nodes.
+  -- Each node is searched independently.
+  start_nodes TableOrSubquery,
+  -- The node limit.
+  node_limit Expr
+)
+RETURNS TableOrSubquery AS
+SELECT * FROM $graph_table;
+)");
+  ASSERT_TRUE(m.errors.empty());
+  ASSERT_EQ(m.macros.size(), 1u);
+  const auto& args = m.macros[0].args;
+  ASSERT_EQ(args.size(), 3u);
+  EXPECT_EQ(args[0].name, "graph_table");
+  EXPECT_EQ(args[0].description, "The graph to search.");
+  EXPECT_EQ(args[1].name, "start_nodes");
+  EXPECT_EQ(args[1].description,
+            "The starting nodes. Each node is searched independently.");
+  EXPECT_EQ(args[2].name, "node_limit");
+  EXPECT_EQ(args[2].description, "The node limit.");
+}
+
+TEST(SqlModuleDocParserTest, MacroUndocumentedArgument) {
+  auto m = Parse(R"(
+CREATE PERFETTO MACRO my_macro(
+  -- The first value.
+  first Expr,
+  second Expr,
+  -- The last value.
+  last Expr
+)
+RETURNS Expr AS
+$first;
+)");
+  ASSERT_TRUE(m.errors.empty());
+  ASSERT_EQ(m.macros.size(), 1u);
+  const auto& args = m.macros[0].args;
+  ASSERT_EQ(args.size(), 3u);
+  EXPECT_EQ(args[0].description, "The first value.");
+  EXPECT_TRUE(args[1].description.empty());
+  EXPECT_EQ(args[2].description, "The last value.");
+}
+
 TEST(SqlModuleDocParserTest, InternalNamesNotExposed) {
   auto m = Parse(R"(
 CREATE PERFETTO TABLE _internal_table(id LONG) AS SELECT 1;
